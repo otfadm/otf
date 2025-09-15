@@ -670,7 +670,6 @@
     const userRegistration = chatWindow.querySelector('.user-registration');
     const chatWelcome = chatWindow.querySelector('.chat-welcome');
     const nameInput = chatWindow.querySelector('#chat-user-name');
-    const emailInput = chatWindow.querySelector('#chat-user-email');
     const nameError = chatWindow.querySelector('#name-error');
     const emailError = chatWindow.querySelector('#email-error');
 
@@ -708,25 +707,16 @@
         userRegistration.classList.add('active');
     }
 
-    // Validate email format
-    function isValidEmail(email) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(email);
-    }
-
     // Handle registration form submission
     async function handleRegistration(event) {
         event.preventDefault();
         
         // Reset error messages
         nameError.textContent = '';
-        emailError.textContent = '';
         nameInput.classList.remove('error');
-        emailInput.classList.remove('error');
         
         // Get values
         const name = nameInput.value.trim();
-        const email = emailInput.value.trim();
         
         // Validate
         let isValid = true;
@@ -734,16 +724,6 @@
         if (!name) {
             nameError.textContent = 'Por favor insira o seu nome';
             nameInput.classList.add('error');
-            isValid = false;
-        }
-        
-        if (!email) {
-            emailError.textContent = 'Por favor insira o seu email';
-            emailInput.classList.add('error');
-            isValid = false;
-        } else if (!isValidEmail(email)) {
-            emailError.textContent = 'Por favor insira email válido';
-            emailInput.classList.add('error');
             isValid = false;
         }
         
@@ -758,8 +738,7 @@
             sessionId: conversationId,
             route: settings.webhook.route,
             metadata: {
-                userId: email,
-                userName: name
+                 userName: name
             }
         }];
 
@@ -784,15 +763,13 @@
             const sessionResponseData = await sessionResponse.json();
             
             // Send user info as first message
-            const userInfoMessage = `Name: ${name}\nEmail: ${email}`;
-            
+            const userInfoMessage = `Name: ${name}`;
             const userInfoData = {
                 action: "sendMessage",
                 sessionId: conversationId,
                 route: settings.webhook.route,
                 chatInput: userInfoMessage,
                 metadata: {
-                    userId: email,
                     userName: name,
                     isUserInfo: true
                 }
@@ -869,7 +846,6 @@
         
         // Get user info if available
         const email = nameInput ? nameInput.value.trim() : "";
-        const name = emailInput ? emailInput.value.trim() : "";
         
         const requestData = {
             action: "sendMessage",
@@ -877,7 +853,6 @@
             route: settings.webhook.route,
             chatInput: messageText,
             metadata: {
-                userId: email,
                 userName: name
             }
         };
