@@ -1,4 +1,4 @@
-// Interactive Chat Widget for n8n in portuguese
+// Interactive Chat Widget for n8n in portuguese - No Email Required
 (function() {
     // Initialize widget only once
     if (window.N8nChatWidgetLoaded) return;
@@ -593,7 +593,7 @@
     const chatWindow = document.createElement('div');
     chatWindow.className = `chat-window ${settings.style.position === 'left' ? 'left-side' : 'right-side'}`;
     
-    // Create welcome screen with header
+    // Create welcome screen with header - REMOVED registration screen
     const welcomeScreenHTML = `
         <div class="chat-header">
             <img class="chat-header-logo" src="${settings.branding.logo}" alt="${settings.branding.name}">
@@ -609,17 +609,6 @@
                 Iniciar chat
             </button>
             <p class="chat-response-time">${settings.branding.responseTimeText}</p>
-        </div>
-        <div class="user-registration">
-            <h2 class="registration-title">Introduza o seu ñome para iniciar a conversa</h2>
-            <form class="registration-form">
-                <div class="form-field">
-                    <label class="form-label" for="chat-user-name">Nome</label>
-                    <input type="text" id="chat-user-name" class="form-input" placeholder="O seu nome" required>
-                    <div class="error-text" id="name-error"></div>
-                </div>
-                <button type="submit" class="submit-registration">Continuar...</button>
-            </form>
         </div>
     `;
 
@@ -664,13 +653,7 @@
     const messagesContainer = chatWindow.querySelector('.chat-messages');
     const messageTextarea = chatWindow.querySelector('.chat-textarea');
     const sendButton = chatWindow.querySelector('.chat-submit');
-    
-    // Registration form elements
-    const registrationForm = chatWindow.querySelector('.registration-form');
-    const userRegistration = chatWindow.querySelector('.user-registration');
     const chatWelcome = chatWindow.querySelector('.chat-welcome');
-    const nameInput = chatWindow.querySelector('#chat-user-name');
-    const nameError = chatWindow.querySelector('#name-error');
 
     // Helper function to generate unique session ID
     function createSessionId() {
@@ -700,50 +683,28 @@
         });
     }
 
-    // Show registration form
-    function showRegistrationForm() {
-        chatWelcome.style.display = 'none';
-        userRegistration.classList.add('active');
-    }
-
-    // Handle registration form submission
-    async function handleRegistration(event) {
-        event.preventDefault();
-        
-        // Reset error messages
-        nameError.textContent = '';
-        nameInput.classList.remove('error');
-        
-        // Get values
-        const name = nameInput.value.trim();
-        
-        // Validate
-        let isValid = true;
-        
-        if (!name) {
-            nameError.textContent = 'Por favor insira o seu nome';
-            nameInput.classList.add('error');
-            isValid = false;
-        }
-        
-        if (!isValid) return;
-        
-        // Initialize conversation with user data
+    // Initialize chat without registration
+    async function initializeChat() {
+        // Generate session ID
         conversationId = createSessionId();
         
-        // First, load the session
+        // Generate anonymous user ID
+        const anonymousUserId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        
+        // Load the session data
         const sessionData = [{
             action: "loadPreviousSession",
             sessionId: conversationId,
             route: settings.webhook.route,
             metadata: {
-                 userName: name
+                userId: anonymousUserId,
+                userName: "Utilizador Anónimo"
             }
         }];
 
         try {
-            // Hide registration form, show chat interface
-            userRegistration.classList.remove('active');
+            // Hide welcome screen, show chat interface
+            chatWelcome.style.display = 'none';
             chatBody.classList.add('active');
             
             // Show typing indicator
@@ -761,29 +722,31 @@
             
             const sessionResponseData = await sessionResponse.json();
             
-            // Send user info as first message
-            const userInfoMessage = `Name: ${name}`;
-            const userInfoData = {
+            // Send initialization message
+            const initMessage = "Iniciar conversa";
+            
+            const initData = {
                 action: "sendMessage",
                 sessionId: conversationId,
                 route: settings.webhook.route,
-                chatInput: userInfoMessage,
+                chatInput: initMessage,
                 metadata: {
-                    userName: name,
-                    isUserInfo: true
+                    userId: anonymousUserId,
+                    userName: "Utilizador Anónimo",
+                    isInitMessage: true
                 }
             };
             
-            // Send user info
-            const userInfoResponse = await fetch(settings.webhook.url, {
+            // Send init message
+            const initResponse = await fetch(settings.webhook.url, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(userInfoData)
+                body: JSON.stringify(initData)
             });
             
-            const userInfoResponseData = await userInfoResponse.json();
+            const initResponseData = await initResponse.json();
             
             // Remove typing indicator
             messagesContainer.removeChild(typingIndicator);
@@ -791,8 +754,8 @@
             // Display initial bot message with clickable links
             const botMessage = document.createElement('div');
             botMessage.className = 'chat-bubble bot-bubble';
-            const messageText = Array.isArray(userInfoResponseData) ? 
-                userInfoResponseData[0].output : userInfoResponseData.output;
+            const messageText = Array.isArray(initResponseData) ? 
+                initResponseData[0].output : initResponseData.output;
             botMessage.innerHTML = linkifyText(messageText);
             messagesContainer.appendChild(botMessage);
             
@@ -820,7 +783,7 @@
             
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         } catch (error) {
-            console.error('Registration error:', error);
+            console.error('Chat initialization error:', error);
             
             // Remove typing indicator if it exists
             const indicator = messagesContainer.querySelector('.typing-indicator');
@@ -831,7 +794,7 @@
             // Show error message
             const errorMessage = document.createElement('div');
             errorMessage.className = 'chat-bubble bot-bubble';
-            errorMessage.textContent = "Desculpe, não foi possivel ligar ao servidor. Por favor, tente novamente mais tarde.";
+            errorMessage.textContent = "Desculpe, não foi possível ligar ao servidor. Por favor, tente novamente mais tarde.";
             messagesContainer.appendChild(errorMessage);
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
@@ -843,8 +806,8 @@
         
         isWaitingForResponse = true;
         
-        // Get user info if available
-        const email = nameInput ? nameInput.value.trim() : "";
+        // Generate anonymous user ID if not already set
+        const anonymousUserId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         
         const requestData = {
             action: "sendMessage",
@@ -852,7 +815,8 @@
             route: settings.webhook.route,
             chatInput: messageText,
             metadata: {
-                userName: name
+                userId: anonymousUserId,
+                userName: "Utilizador Anónimo"
             }
         };
 
@@ -897,7 +861,7 @@
             // Show error message
             const errorMessage = document.createElement('div');
             errorMessage.className = 'chat-bubble bot-bubble';
-            errorMessage.textContent = "Sorry, I couldn't send your message. Please try again.";
+            errorMessage.textContent = "Desculpe, não foi possível enviar a sua mensagem. Por favor, tente novamente.";
             messagesContainer.appendChild(errorMessage);
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         } finally {
@@ -912,8 +876,7 @@
     }
 
     // Event listeners
-    startChatButton.addEventListener('click', showRegistrationForm);
-    registrationForm.addEventListener('submit', handleRegistration);
+    startChatButton.addEventListener('click', initializeChat);
     
     sendButton.addEventListener('click', () => {
         const messageText = messageTextarea.value.trim();
