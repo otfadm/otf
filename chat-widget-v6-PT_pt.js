@@ -671,7 +671,6 @@
     const chatWelcome = chatWindow.querySelector('.chat-welcome');
     const nameInput = chatWindow.querySelector('#chat-user-name');
     const nameError = chatWindow.querySelector('#name-error');
-    const emailError = chatWindow.querySelector('#email-error');
 
     // Helper function to generate unique session ID
     function createSessionId() {
